@@ -9,6 +9,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from pprint import pformat
 from typing import Annotated, Literal, TypeAlias
 
 # Add repo directory to sys.path if not exist
@@ -33,7 +34,6 @@ class SentiRating(BaseModel):
     """Structured response for sentiment rating of stock-related news."""
 
     id: int = Field(description="ID for each news article")
-    ticker: str = Field(description="Stock ticker whose news are sentiment-rated.")
     rating: int = Field(
         description="Sentiment from 1 (negative) to 5 (positive).", gte=1, le=5
     )
@@ -67,12 +67,9 @@ class SentiRater:
             (Default: "https://api.perplexity.ai/chat/completions").
         model (str):
             Perplexity model to be used (Default: "sonar").
-        struct_models (list[StructModel]):
-            List of StructModel objects i.e. Perplexity model that supports
-            structured outputs(Default: ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro"]).
         news_path (str):
             Relative path to csv file containing news articles with divergent
-            sentiment rating.
+            sentiment rating (Default: "./data/divergent.csv").
 
     Attributes:
         api_url (str):
@@ -80,30 +77,23 @@ class SentiRater:
             (Default: "https://api.perplexity.ai/chat/completions").
         model (str):
             Perplexity model to be used (Default: "sonar").
-        struct_models (list[StructModel]):
-            List of StructModel objects i.e. Perplexity model that supports
-            structured outputs(Default: ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro"]).
         news_path (str):
             Relative path to csv file containing news articles with divergent
             sentiment rating.
+        api_key (str):
+            Perplexity api key.
     """
 
     def __init__(
         self,
-        api_key: str | None = None,
+        api_url: str = "https://api.perplexity.ai/chat/completions",
         model: str = "sonar",
-        struct_models: list[StructModel] = [
-            "sonar",
-            "sonar-pro",
-            "sonar-reasoning",
-            "sonar-reasoning-pro",
-        ],
-        news_path: str = "./data/news.csv",
+        news_path: str = "./data/divergent.csv",
     ):
-        self.api_key = api_key or self._get_api_key()
+        self.api_url = api_url
         self.model = model
-        self.struct_models = struct_models
         self.news_path = news_path
+        self.api_key = self._get_api_key()
 
     def _get_api_key(self) -> str:
         """Get API key from environment variables."""
@@ -128,27 +118,97 @@ class SentiRater:
                 DataFrame with appended sentiment rating and reasons.
         """
 
+        # load 'divergent.csv' as DataFrame
+        df_news = pd.read_csv(self.news_path)
+
+        # Generate 'id' column from index
+        df_news.insert(0, "id", df_news.index)
+
         # Generate list of news items
-        news_list = self.gen_news_list()
+        news_list = self.gen_news_list(df_news)
 
-        return news_list
+        # Get response json after posting payload to Perplexity API
+        rating_list = self.get_response(news_list)
 
-    def gen_news_list(self) -> list[dict[str, int | str]]:
+        # Convert 'rating_list' to DataFrame
+        df_rating = pd.DataFrame(rating_list)
+
+        # Merge 'df_news' and 'df_rating'
+        df_combined = df_news.merge(right=df_rating, how="left", on="id")
+
+        # # Convert 'reasons' field from list to string
+        # news_list = self.
+
+    def get_response(
+        self, news_list: list[dict[str, int | str]]
+    ) -> list[dict[str, int | str]]:
+        """Get response after posting payload to Perplexity API.
+
+        Args:
+            news_list (list[dict[str, int  |  str]]):
+                List of news as dictionary containing 'id', 'ticker' and
+                'news' info.
+
+        Returns:
+            (list[dict[str, int | str]]):
+                List of dictionary containing 'id', 'rating' and 'reasons' info.
+        """
+
+        # Set headers for API request
+        headers = {
+            "accept": "application/json",
+            "content_type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+
+        # Payload to be send to Perplexity API
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_prompt.format(news_list=news_list)},
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"schema": SentiRating.model_json_schema()},
+            },
+        }
+
+        try:
+            response = requests.post(self.api_url, headers=headers, json=payload)
+            response.raise_for_status()
+            result = response.json()
+
+            return result["choices"][0]["message"]["content"]
+
+        except requests.exceptions.RequestException as e:
+            return {"error": f"API request failed: {e}"}
+
+        except json.JSONDecodeError:
+            return {"error": "Failed to parse API response as JSON."}
+
+        except Exception as e:
+            return {"error": f"Unexpected error: {e}"}
+
+    def gen_news_list(self, df_news: pd.DataFrame) -> list[dict[str, int | str]]:
         """Generate list of news items i.e. dictionary containing 'id', 'ticker'
         # and 'content' keys."""
 
-        # Load 'news.csv' as DataFrame
-        df_news = pd.read_csv(self.news_path)
+        df = df_news.copy()
 
-        # Extract 'id' and 'ticker', 'title' and 'content'
+        # Combine 'title' and 'content' to 'news' column
+        df["news"] = df["title"] + "\n\n" + df["content"]
+
+        # Filter 'id', 'ticker' and 'news' columns
+        df = df.loc[:, ["id", "ticker", "news"]]
+
+        # Convert to list of dictionary
+        return df.to_dict(orient="records")
 
 
 def main() -> None:
     senti_rater = SentiRater()
-    df_senti = senti_rater.run()
-
-    print(f"\n\n{df_senti}\n")
-    print(df_senti.columns)
+    senti_rater.run()
 
 
 if __name__ == "__main__":

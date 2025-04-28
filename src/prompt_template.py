@@ -5,7 +5,7 @@ sys_prompt = """You are a financial expert analyzing stock news sentiment.
 
 - 'id': Unique identifier,
 - 'ticker': Stock symbol for sentiment analysis,
-- 'content': News title and content.
+- 'news': News title and content.
 
 2. Focus ONLY on sentiment for specified 'ticker', ignoring other mentioned stocks.
 3. Rate using this scale:
