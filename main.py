@@ -8,9 +8,12 @@
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from pprint import pformat
 from typing import Annotated, Literal, TypeAlias
+
+from tqdm import tqdm
 
 # Add repo directory to sys.path if not exist
 repo_dir = Path(__file__).parent.as_posix()
@@ -23,6 +26,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from src.prompt_template import sys_prompt, user_prompt
+from src.utils import utils
 
 # Create literal for Perplexity model that allows structured output
 StructModel: TypeAlias = Literal[
@@ -127,31 +131,37 @@ class SentiRater:
         # Generate list of news items
         news_list = self.gen_news_list(df_news)
 
-        # Get response json after posting payload to Perplexity API
-        rating_list = self.get_response(news_list)
+        # # Get response json after posting payload to Perplexity API
+        # rating_list = []
+
+        # for idx, news_item in tqdm(enumerate(news_list)):
+        #     rating_list.append(self.get_response(news_item))
+
+        #     if idx != 0 and idx % 50 == 0:
+        #         # Pause for 45 seconds for every 50 calls to prevent rate limit
+        #         time.sleep(45)
+
+        rating_list = utils.load_json("./rating_list.json")
 
         # Convert 'rating_list' to DataFrame
         df_rating = pd.DataFrame(rating_list)
 
         # Merge 'df_news' and 'df_rating'
         df_combined = df_news.merge(right=df_rating, how="left", on="id")
+        df_combined.to_csv("./data/test.csv", index=False)
 
-        # # Convert 'reasons' field from list to string
-        # news_list = self.
+        return df_combined
 
-    def get_response(
-        self, news_list: list[dict[str, int | str]]
-    ) -> list[dict[str, int | str]]:
+    def get_response(self, news_item: dict[str, int | str]) -> dict[str, int | str]:
         """Get response after posting payload to Perplexity API.
 
         Args:
-            news_list (list[dict[str, int  |  str]]):
-                List of news as dictionary containing 'id', 'ticker' and
-                'news' info.
+            news_item (dict[str, int  |  str]):
+                Dictionary containing 'id', 'ticker' and 'news' info.
 
         Returns:
-            (list[dict[str, int | str]]):
-                List of dictionary containing 'id', 'rating' and 'reasons' info.
+            (dict[str, int | str]):
+                Dictionary containing 'id', 'rating' and 'reasons' info.
         """
 
         # Set headers for API request
@@ -166,12 +176,13 @@ class SentiRater:
             "model": self.model,
             "messages": [
                 {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": user_prompt.format(news_list=news_list)},
+                {"role": "user", "content": user_prompt.format(news_item=news_item)},
             ],
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {"schema": SentiRating.model_json_schema()},
             },
+            "web_search_options": {"search_context_size": "low"},
         }
 
         try:
@@ -179,7 +190,10 @@ class SentiRater:
             response.raise_for_status()
             result = response.json()
 
-            return result["choices"][0]["message"]["content"]
+            # content is a json string
+            content = result["choices"][0]["message"]["content"]
+
+            return json.loads(content)
 
         except requests.exceptions.RequestException as e:
             return {"error": f"API request failed: {e}"}
@@ -208,7 +222,10 @@ class SentiRater:
 
 def main() -> None:
     senti_rater = SentiRater()
-    senti_rater.run()
+    df_combined = senti_rater.run()
+
+    print(f"df_combined : \n\n{df_combined}\n")
+    print(f"df_combined.columns : {df_combined.columns}")
 
 
 if __name__ == "__main__":

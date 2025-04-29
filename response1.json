@@ -1,0 +1,33 @@
+{
+    "id": "6bcdda6c-a558-469c-b0b1-51df86df77e0",
+    "model": "sonar",
+    "created": 1745895624,
+    "usage": {
+        "prompt_tokens": 472,
+        "completion_tokens": 38,
+        "total_tokens": 510,
+        "search_context_size": "low"
+    },
+    "citations": [
+        "https://www.kaggle.com/code/indermohanbains/news-sentiment-analysis",
+        "https://www.newscatcherapi.com/blog/sentiment-analysis-using-python",
+        "https://arxiv.org/pdf/2007.02238",
+        "https://github.com/KidQuant/Analyzing-News-Articles-With-Python/blob/master/Analyzing%20News%20Articles%20With%20Python%20(Part%203)%20-%20Sentiment%20Analysis.ipynb",
+        "https://github.com/farooq96/News-Sentiment-Analysis-in-Python"
+    ],
+    "object": "chat.completion",
+    "choices": [
+        {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+                "role": "assistant",
+                "content": "{\n\"id\": 0,\n\"rating\": 4,\n\"reasons\": [\n\"Analyst maintains buy rating despite Siri delay\",\n\"Citi cites recovery potential for Apple stock\"\n]\n}\n"
+            },
+            "delta": {
+                "role": "assistant",
+                "content": ""
+            }
+        }
+    ]
+}
