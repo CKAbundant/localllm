@@ -9,6 +9,7 @@ from pathlib import Path
 from pprint import pformat
 from typing import Any
 
+import pandas as pd
 from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
 from llama_cpp import ChatCompletionRequestResponseFormat, Llama
