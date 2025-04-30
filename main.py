@@ -137,7 +137,7 @@ class SentiRater:
 
         return api_key
 
-    def run(self) -> pd.DataFrame:
+    def run(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Perform sentiment rating for list of news items and return results as
         DataFrame.
 
@@ -145,8 +145,10 @@ class SentiRater:
             None.
 
         Returns:
-            (pd.DataFrame):
+            df_combined (pd.DataFrame):
                 DataFrame with appended sentiment rating and reasons.
+            df_tokens (pd.DataFrame):
+                dataFrame containing tokens usage info.
         """
 
         # load 'divergent.csv' as DataFrame
@@ -181,7 +183,7 @@ class SentiRater:
         df_combined.to_csv(self.test_path, index=False)
         df_tokens.to_csv(self.tokens_path, index=False)
 
-        return df_combined
+        return df_combined, df_tokens
 
     def gen_senti_df(
         self, df_news: pd.DataFrame, rating_list: list[dict[str, int | str]]
@@ -259,7 +261,12 @@ class SentiRater:
 
             # content is a json string. Remove citation brackets
             content = result["choices"][0]["message"]["content"]
-            content = re.sub(r"\[\d+\]|\[user.*\]", "", content)
+            content = re.sub(
+                r"\[\d+\]|\[user.*\]|\[\^.*\]|\[news.*\]",
+                "",
+                content,
+                flags=re.IGNORECASE,
+            )
 
             return json.loads(content)
 
@@ -290,10 +297,14 @@ class SentiRater:
 
 def main() -> None:
     senti_rater = SentiRater()
-    df_combined = senti_rater.run()
+    df_combined, df_tokens = senti_rater.run()
 
     print(f"df_combined : \n\n{df_combined}\n")
     print(f"df_combined.columns : {df_combined.columns}")
+
+    print(f"df_tokens : \n\n{df_tokens}\n")
+    print(f"df_tokens.columns : {df_tokens.columns}")
+    print(f"\ndf_tokens.describe() : \n\n{df_tokens.describe()}\n")
 
 
 if __name__ == "__main__":
