@@ -24,7 +24,7 @@ sys_prompt = """You are a financial expert analyzing stock news sentiment.
 - **Reasons must directly reference the sentiment towards specified 'ticker'.**
 
 ## Output format
-Return a SINGLE JSON object:
+Return a SINGLE JSON object with the **3 required keys ONLY**:
 
 - 'id': (original)
 - 'rating': (integer 1 to 5)
@@ -34,6 +34,8 @@ Return a SINGLE JSON object:
 1. Analyze ONLY the specified 'ticker'; ignore other stocks.
 2. DO NOT use web searches or external data.
 3. Be PRECISE (based reasoning ONLY on information in 'news') and CONCISE.
+4. DO NOT omit any required keys.
+5. DO NOT add new keys or additional reasoning.
 
 """
 

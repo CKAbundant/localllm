@@ -1,9 +1,9 @@
 """Classes for various local llm download and inference."""
 
-import json
-import os
+import ast
 import re
 import sys
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from pprint import pformat
@@ -21,42 +21,41 @@ if repo_dir not in sys.path:
 from src.prompt_template import sys_prompt, user_prompt
 from src.senti_rater import SentiRating
 from src.utils import utils
+from src.utils.timed_method import TimedMethod
 
-MODELS = {
-    "mistral": (
-        "TheBloke/Mistral-7B-Instruct-v0.1-GGUF",
-        "mistral-7b-instruct-v0.1.Q4_K_M.gguf",
-    ),
-    "llama3": (
-        "TheBloke/Meta-Llama-3-8B-Instruct-GGUF",
-        "Meta-Llama-3-8B-Instruct.Q4_K_M.gguf",
-    ),
-    "qwen": ("Qwen/Qwen1.5-7B-Chat-GGUF", "qwen1_5-7b-chat-q4_k_m.gguf"),
-    "deepseek": (
-        "TheBloke/deepseek-llm-7B-chat-GGUF",
-        "deepseek-llm-7b-chat.Q4_K_M.gguf",
-    ),
-    "gemma": (
-        "google/gemma-3-4b-it-qat-q4_0-gguf",
-        "gemma-3-4b-it-q4_0.gguf",
-    ),  # Requires auth
-}
+# MODELS = {
+#     "mistral": (
+#         "TheBloke/Mistral-7B-Instruct-v0.1-GGUF",
+#         "mistral-7b-instruct-v0.1.Q4_K_M.gguf",
+#     ),
+#     "llama3": (
+#         "TheBloke/Meta-Llama-3-8B-Instruct-GGUF",
+#         "Meta-Llama-3-8B-Instruct.Q4_K_M.gguf",
+#     ),
+#     "qwen": ("Qwen/Qwen1.5-7B-Chat-GGUF", "qwen1_5-7b-chat-q4_k_m.gguf"),
+#     "deepseek": (
+#         "TheBloke/deepseek-llm-7B-chat-GGUF",
+#         "deepseek-llm-7b-chat.Q4_K_M.gguf",
+#     ),
+#     "gemma": (
+#         "google/gemma-3-4b-it-qat-q4_0-gguf",
+#         "gemma-3-4b-it-q4_0.gguf",
+#     ),  # Requires auth
+# }
 
 
-def download_hf(model_name: str = "Gemma-4B") -> None:
+def download_hf(
+    repo_id: str, filename: str, model_dir: str, token: str | None = None
+) -> None:
     """Download local LLM."""
-    load_dotenv()
 
-    repo_id = MODELS[model_name][0]
-    file_name = MODELS[model_name][1]
-
-    utils.create_folder("./models")
+    utils.create_folder(model_dir)
 
     hf_hub_download(
         repo_id=repo_id,
-        filename=file_name,
-        local_dir=f"./models/{model_name}",
-        token=os.getenv("HF_KEY") if "gemma" in repo_id else None,
+        filename=filename,
+        local_dir=model_dir,
+        token=token,
     )
 
 
@@ -64,46 +63,46 @@ class InferLLM(ABC):
     """Abstract class for local llm inference.
 
     Args:
-        model_name (str):
-            Name of model family e.g. "gemma".
-        model_dir (str):
-            Relative path to folder containing GGUF files.
-        n_ctx (int):
-            Context window i.e. Maximum number of input and output tokens allowed.
-        n_threads (int):
-            Number of CPU threads. Ryzen 5700 has 8 CPU cores.
-        n_gpu_layers (int):
-            Number of GPUs available. 0 for no GPU.
-
-    Attributes:
-        model_name (str):
-            Name of model family e.g. "gemma".
-        model_dir (str):
-            Relative path to folder containing GGUF files.
-        n_ctx (int):
-            Context window i.e. Maximum number of input and output tokens allowed.
-        n_threads (int):
-            Number of CPU threads. Ryzen 5700 has 8 CPU cores.
-        n_gpu_layers (int):
-            Number of GPUs available. 0 for no GPU.
         model_path (str):
             Relative path to desired GGUF file.
+        n_ctx (int):
+            Context window i.e. Maximum number of input and output tokens allowed.
+        n_threads (int):
+            Number of CPU threads. Ryzen 5700 has 8 CPU cores.
+        n_gpu_layers (int):
+            Number of GPUs available. 0 for no GPU.
+        verbose (bool):
+            Whether to show all info.
+
+    Attributes:
+        model_path (str):
+            Relative path to desired GGUF file.
+        n_ctx (int):
+            Context window i.e. Maximum number of input and output tokens allowed.
+        n_threads (int):
+            Number of CPU threads. Ryzen 5700 has 8 CPU cores.
+        n_gpu_layers (int):
+            Number of GPUs available. 0 for no GPU.
+        verbose (bool):
+            Whether to show all info.
+        _timings (list[float]):
+            List to store time taken to 'senti_rate' method.
     """
 
     def __init__(
         self,
-        model_name: str,
-        model_dir: str,
+        model_path: str,
         n_ctx: int,
         n_threads: int,
         n_gpu_layers: int,
+        verbose: bool,
     ) -> None:
-        self.model_name = model_name
-        self.model_dir = model_dir
+        self.model_path = model_path
         self.n_ctx = n_ctx
         self.n_threads = n_threads
         self.n_gpu_layers = n_gpu_layers
-        self.model_path = f"{model_dir}/{model_name}/{MODELS[model_name][1]}"
+        self.verbose = verbose
+        self.timings = []
 
     @abstractmethod
     def senti_rate(self, news_item: dict[str, int | str]) -> dict[str, Any]:
@@ -138,18 +137,19 @@ class InferLLM(ABC):
 
 
 class GemmaLLM(InferLLM):
-    """Concrete implementation of 'InferLLM' abstract class."""
+    """Concrete implementation of 'InferLLM' abstract class for 'Gemma' models."""
 
     def __init__(
         self,
-        model_name: str = "gemma",
-        model_dir: str = "./models",
+        model_path: str,
         n_ctx: int = 2048,
         n_threads: int = 8,
         n_gpu_layers: int = 0,
+        verbose: bool = False,
     ) -> None:
-        super().__init__(model_name, model_dir, n_ctx, n_threads, n_gpu_layers)
+        super().__init__(model_path, n_ctx, n_threads, n_gpu_layers, verbose)
 
+    @TimedMethod
     def senti_rate(self, news_item: dict[str, int | str]) -> dict[str, Any]:
         """Perform sentiment rating on 'news_item'.
 
@@ -168,6 +168,7 @@ class GemmaLLM(InferLLM):
             n_ctx=self.n_ctx,
             n_threads=self.n_threads,
             n_gpu_layers=self.n_gpu_layers,
+            verbose=self.verbose,
         )
 
         # Generate payload for chat completion
@@ -180,10 +181,10 @@ class GemmaLLM(InferLLM):
         # Remove message fences and white spaces
         content = re.sub(r"```(json)*|\n\s*", "", content)
 
-        utils.save_json(response, "response.json")
+        print(f"\nresponse : \n\n{response}\n")
 
         # Ensure dictionary is returned
-        return json.loads(content)
+        return ast.literal_eval(content)
 
     def gen_payload(self, news_item: dict[str, int | str]) -> dict[str, Any]:
         """Generate payload for local llm chat completion.
@@ -207,6 +208,119 @@ class GemmaLLM(InferLLM):
                 "json_schema": {"schema": SentiRating.model_json_schema()},
             },
             "temperature": 0.2,
+        }
+
+        return payload
+
+
+class MistralLLM(InferLLM):
+    """Concrete implementation of 'InferLLM' abstract class for 'Mistral' models.
+
+    Args:
+        chat_format (str):
+            Chat format template required if 'chat_template' is unavailable in
+            HuggingFace (Default: "mistral-instruct").
+        stop (list[str]):
+            List of stop characters to indicate end of prompt (Default:
+            ["</s>", "[INST]", "[/INST]"]).
+
+    Attributes:
+        chat_format (str):
+            Chat format template required if 'chat_template' is unavailable in
+            HuggingFace (Default: "mistral-instruct").
+        stop (list[str]):
+            List of stop characters to indicate end of prompt (Default:
+            ["</s>", "[INST]", "[/INST]"]).
+    """
+
+    def __init__(
+        self,
+        model_path: str,
+        n_ctx: int = 2048,
+        n_threads: int = 8,
+        n_gpu_layers: int = 0,
+        verbose: bool = False,
+        chat_format: str = "mistral-instruct",
+        stop: list[str] = ["</s>", "[INST]", "[/INST]"],
+    ) -> None:
+        super().__init__(model_path, n_ctx, n_threads, n_gpu_layers, verbose)
+        self.chat_format = chat_format
+        self.stop = stop
+
+    @TimedMethod
+    def senti_rate(self, news_item: dict[str, int | str]) -> dict[str, Any]:
+        """Perform sentiment rating on 'news_item'.
+
+        Args:
+            news_item (dict[str, int  |  str]):
+                Dictionary containing 'id', 'ticker' and 'news' info.
+
+        Returns:
+            payload (dict[str, int | str]):
+                Dictionary containing 'id', 'rating' and 'reasons' info.
+        """
+
+        # Load local llm
+        llm = Llama(
+            model_path=self.model_path,
+            n_ctx=self.n_ctx,
+            n_threads=self.n_threads,
+            n_gpu_layers=self.n_gpu_layers,
+            verbose=self.verbose,
+            chat_format=self.chat_format,
+        )
+
+        # Generate payload for chat completion
+        payload = self.gen_payload(news_item)
+
+        counter = 0
+        while counter < 3:
+            try:
+                # Get sentiment rating and reasons
+                response = llm.create_chat_completion(**payload)
+                content = response["choices"][0]["message"]["content"]
+
+                # Remove message fences and white spaces
+                content = re.sub(r"```(json)*|\n\s*", "", content)
+
+                # Ensure keys are wrapped in double quotes and not single quotes
+
+                print(f"\nresponse : \n\n{pformat(response)}\n")
+
+                # Ensure dictionary is returned
+                return ast.literal_eval(content)
+
+            except Exception as e:
+                counter += 1
+                print(f"Attempts to rate sentiment : {counter}")
+
+                # Wait 3 seconds to attempt again
+                time.sleep(3)
+
+        return {}
+
+    def gen_payload(self, news_item: dict[str, int | str]) -> dict[str, Any]:
+        """Generate payload for local llm chat completion.
+
+        Args:
+            news_item (dict[str, int  |  str]):
+                Dictionary containing 'id', 'ticker' and 'news' info.
+
+        Returns:
+            payload (dict[str, int | str]):
+                Dictionary containing 'id', 'rating' and 'reasons' info.
+        """
+
+        usr_prompt = user_prompt.format(news_item=news_item)
+
+        payload = {
+            "messages": [{"role": "user", "content": f"{sys_prompt}\n\n{usr_prompt}"}],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"schema": SentiRating.model_json_schema()},
+            },
+            "temperature": 0.1,
+            "stop": self.stop,
         }
 
         return payload

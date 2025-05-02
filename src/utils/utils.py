@@ -1,6 +1,78 @@
+import importlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Type, TypeVar
+
+from omegaconf import DictConfig, OmegaConf, ValidationError
+
+# Create generic type variable 'T'
+T = TypeVar("T")
+
+
+def load_config(cfg_path: str = "./config/config.yaml") -> DictConfig | None:
+    """Load configuration parameters in 'config.yaml'."""
+
+    if not Path(cfg_path).is_file():
+        raise FileNotFoundError(f"No 'config.yaml' file found at '{cfg_path}'.")
+
+    try:
+        return OmegaConf.load(cfg_path)
+
+    except ValidationError as e:
+        print(f"Unable to load configuration : {e}")
+
+
+def get_class_instance(
+    class_name: str, script_path: str, **params: dict[str, Any]
+) -> T:
+    """Return instance of a class that is initialized with 'params'.
+
+    Args:
+        class_name (str):
+            Name of class in python script.
+        script_path (str):
+            Relative file path to python script that contains the required class.
+        **params (dict[str, Any]):
+            Arbitrary Keyword input arguments to initialize class instance.
+
+    Returns:
+        (T): Initialized instance of class.
+    """
+
+    # Convert script path to package path
+    module_path = convert_path_to_pkg(script_path)
+
+    try:
+        # Import python script at class path as python module
+        module = importlib.import_module(module_path)
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(f"Module not found in '{script_path}' : {e}")
+
+    try:
+        # Get class from module
+        req_class: Type[T] = getattr(module, class_name)
+    except AttributeError as e:
+        raise AttributeError(f"'{class_name}' class is not found in module.")
+
+    # Intialize instance of class
+    return req_class(**params)
+
+
+def convert_path_to_pkg(script_path: str) -> str:
+    """Convert file path to package path that can be used as input to importlib."""
+
+    script_path = Path(script_path)
+
+    if not script_path.is_file():
+        raise FileNotFoundError(
+            f"{script_path.name} is not found in '{script_path.parent}' folder."
+        )
+
+    # Remove suffix ".py"
+    script_path = Path(script_path).with_suffix("").as_posix()
+
+    # Convert to package format for use in 'importlib.import_module'
+    return script_path.replace("/", ".")
 
 
 def create_folder(dir_path: str | Path) -> None:
