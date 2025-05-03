@@ -117,10 +117,10 @@ class GenAnalysis:
                 DataFrame containing performance metrics for local LLM.
         """
 
-        # # Generate DataFrame containing sentiment ratings by local LLM
-        # df_senti = self.gen_dataset()
+        # Generate DataFrame containing sentiment ratings by local LLM
+        df_senti = self.gen_dataset()
 
-        df_senti = pd.read_csv(self.ratings_path)
+        # df_senti = pd.read_csv(self.ratings_path)
 
         # Generate DataFrame containing performance metrics
         df_metrics = self.gen_metrics(df_senti)
@@ -140,9 +140,11 @@ class GenAnalysis:
         news_list = self.gen_news_list(df_test)
 
         # Generate list of sentiment ratings and reasons based on 'news_list'
-        rating_list = [
-            self.local_llm.senti_rate(news_item) for news_item in tqdm(news_list)
-        ]
+
+        rating_list = []
+        for news_item in tqdm(news_list):
+            rating_list.append(self.local_llm.senti_rate(news_item))
+            print(f"self.local_llm.timings : {self.local_llm.timings}")
 
         # Convert to 'rating_list' to DataFrame
         df_ratings = pd.DataFrame(rating_list)
@@ -152,6 +154,7 @@ class GenAnalysis:
         df_senti = df_filter.merge(
             df_ratings, how="left", on="id", suffixes=(None, f"_{self.model_name}")
         )
+        df_senti["infer_time"] = self.local_llm.timings
 
         # Create folder if not exist
         utils.create_folder(Path(self.ratings_path).parent)
@@ -222,8 +225,8 @@ class GenAnalysis:
         """Plot confusion matrix as seaborn heatmap."""
 
         # Generate labels for ratings 1 to 5
-        idx_labels = [f"Actual Rating {i+1}" for i in range(5)]
-        col_labels = [f"Predicted Rating {i+1}" for i in range(5)]
+        idx_labels = [f"Act {i+1}" for i in range(5)]
+        col_labels = [f"Pred {i+1}" for i in range(5)]
 
         # Convert confusion matrix to DataFrame
         df_cm = pd.DataFrame(cmatrix, index=idx_labels, columns=col_labels)
@@ -235,10 +238,9 @@ class GenAnalysis:
         fig, ax = plt.subplots(figsize=(12, 10))
 
         ax = sns.heatmap(df_cm, **self.fig.heatmap)
-        ax.set_xlabel("Predicted Labels", fontsize=14)
-        ax.set_ylabel("True Labels", fontsize=14)
-        ax.set_title(f"Confusion Matrix for {self.model_name}", fontsize=18)
-        ax.tick_params(axis="x", rotation=30)
+        ax.set_xlabel("Predicted Sentiment Rating", fontsize=18)
+        ax.set_ylabel("Actual Sentiment Rating", fontsize=18)
+        ax.set_title(f"Confusion Matrix for {self.model_name}", fontsize=24)
 
         # Save figure as png file
         plt.tight_layout()
