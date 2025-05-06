@@ -1,5 +1,6 @@
 import importlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Type, TypeVar
 
@@ -129,3 +130,31 @@ def get_token_usage(response: dict[str, Any]) -> dict[str, int]:
     }
 
     return dict(**token_dict, **usage_dict)
+
+
+def remove_think(text: str) -> str:
+    """Remove the think block i.e. '<think> ... </think>' from 'text' string."""
+
+    # Get the start and end index for think block
+    start_idx = text.find("<think>")
+    end_idx = text.find("</think>") + len("</think>")
+
+    # Exclude think block
+    return f"{text[0:start_idx]}\n{text[end_idx:]}"
+
+
+def extract_dict_response(text: str) -> str:
+    """Extract dictionary response from local LLM i.e. exclude thinking quotes."""
+
+    # Get the starting message fence
+    msg_fence = re.findall(r"```\w*", text)[0]
+
+    # Get start and end index
+    start_idx = text.find(msg_fence) + len(msg_fence)
+    end_idx = -3  # Exclude ``` at the end
+
+    # Extract dictionary response
+    text = text[start_idx:end_idx]
+
+    # Remove new lines and extra whitespaces
+    return re.sub(r"\n+|\s\s+", "", text)

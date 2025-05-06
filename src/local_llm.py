@@ -23,26 +23,6 @@ from src.senti_rater import SentiRating
 from src.utils import utils
 from src.utils.timed_method import TimedMethod
 
-# MODELS = {
-#     "mistral": (
-#         "TheBloke/Mistral-7B-Instruct-v0.1-GGUF",
-#         "mistral-7b-instruct-v0.1.Q4_K_M.gguf",
-#     ),
-#     "llama3": (
-#         "TheBloke/Meta-Llama-3-8B-Instruct-GGUF",
-#         "Meta-Llama-3-8B-Instruct.Q4_K_M.gguf",
-#     ),
-#     "qwen": ("Qwen/Qwen1.5-7B-Chat-GGUF", "qwen1_5-7b-chat-q4_k_m.gguf"),
-#     "deepseek": (
-#         "TheBloke/deepseek-llm-7B-chat-GGUF",
-#         "deepseek-llm-7b-chat.Q4_K_M.gguf",
-#     ),
-#     "gemma": (
-#         "google/gemma-3-4b-it-qat-q4_0-gguf",
-#         "gemma-3-4b-it-q4_0.gguf",
-#     ),  # Requires auth
-# }
-
 
 def download_hf(
     repo_id: str, filename: str, model_dir: str, token: str | None = None
@@ -370,6 +350,7 @@ class QwenLLM(InferLLM):
         n_gpu_layers: int = 0,
         verbose: bool = False,
         chat_format: str = "chatml",
+        rope_freq_base: float = 1000000.0,
         temperature: float = 0.7,
         top_p: float = 0.8,
         top_k: int = 20,
@@ -378,6 +359,7 @@ class QwenLLM(InferLLM):
     ) -> None:
         super().__init__(model_path, n_ctx, n_threads, n_gpu_layers, verbose)
         self.chat_format = chat_format
+        self.rope_freq_base = rope_freq_base
         self.temperature = temperature
         self.top_p = top_p
         self.top_k = top_k
@@ -405,6 +387,7 @@ class QwenLLM(InferLLM):
             n_gpu_layers=self.n_gpu_layers,
             verbose=self.verbose,
             chat_format=self.chat_format,
+            rope_freq_base=self.rope_freq_base,
         )
 
         # Generate payload for chat completion
@@ -416,6 +399,9 @@ class QwenLLM(InferLLM):
                 # Get sentiment rating and reasons
                 response = llm.create_chat_completion(**payload)
                 content = response["choices"][0]["message"]["content"]
+
+                # Remove thinking quotes i.e. <think> ... </think>
+                content = utils.remove_think(content)
 
                 # Remove message fences and white spaces
                 content = re.sub(r"```(json)*|\n\s*", "", content)
@@ -539,8 +525,8 @@ class DeepSeekLLM(InferLLM):
                 response = llm.create_chat_completion(**payload)
                 content = response["choices"][0]["message"]["content"]
 
-                # Remove message fences and white spaces
-                content = re.sub(r"```(json)*|\n\s*", "", content)
+                # Extract dictionary LLM response
+                content = utils.extract_dict_response(content)
 
                 print(f"\nresponse : \n\n{pformat(response)}\n")
 

@@ -51,10 +51,6 @@ def main() -> None:
         download_hf(**cfg_model.download)
 
     if cfg.infer:
-        if not Path(gguf_path).is_file():
-            # Download the GGUF file from hugging face if not exist
-            download_hf(**cfg_model.download)
-
         # Get instance of desired Infernence class
         infer_llm = utils.get_class_instance(**cfg_model.infer)
 
@@ -72,6 +68,9 @@ def main() -> None:
 
         print(f"df_senti : \n\n{df_senti}\n")
         print(f"df_metrics : \n\n{df_metrics}\n")
+
+
+# def gen_overall_metrics()
 
 
 if __name__ == "__main__":

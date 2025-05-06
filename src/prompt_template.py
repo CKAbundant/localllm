@@ -35,7 +35,7 @@ Return a SINGLE JSON object with the **3 required keys ONLY**:
 2. DO NOT use web searches or external data.
 3. Be PRECISE (based reasoning ONLY on information in 'news') and CONCISE.
 4. DO NOT omit any required keys.
-5. DO NOT add new keys or additional reasoning.
+5. DO NOT add new keys.
 
 """
 
