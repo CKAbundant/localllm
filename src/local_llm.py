@@ -158,8 +158,8 @@ class LlamaLLM(InferLLM):
         response = llm.create_chat_completion(**payload)
         content = response["choices"][0]["message"]["content"]
 
-        # Remove message fences and white spaces
-        content = re.sub(r"```(json)*|\n\s*", "", content)
+        # Extract dictionary LLM response
+        content = utils.extract_dict_response(content)
 
         print(f"\nresponse : \n\n{response}\n")
 
@@ -260,10 +260,8 @@ class MistralLLM(InferLLM):
                 response = llm.create_chat_completion(**payload)
                 content = response["choices"][0]["message"]["content"]
 
-                # Remove message fences and white spaces
-                content = re.sub(r"```(json)*|\n\s*", "", content)
-
-                # Ensure keys are wrapped in double quotes and not single quotes
+                # Extract dictionary LLM response
+                content = utils.extract_dict_response(content)
 
                 print(f"\nresponse : \n\n{pformat(response)}\n")
 
@@ -400,11 +398,8 @@ class QwenLLM(InferLLM):
                 response = llm.create_chat_completion(**payload)
                 content = response["choices"][0]["message"]["content"]
 
-                # Remove thinking quotes i.e. <think> ... </think>
-                content = utils.remove_think(content)
-
-                # Remove message fences and white spaces
-                content = re.sub(r"```(json)*|\n\s*", "", content)
+                # Extract dictionary LLM response
+                content = utils.extract_dict_response(content)
 
                 print(f"\nresponse : \n\n{pformat(response)}\n")
 
