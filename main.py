@@ -63,6 +63,7 @@ def main() -> None:
             cfg_model.ratings_path,
             cfg_model.metrics_path,
             cfg.req_cols,
+            cfg.start_id,
         )
         df_senti, df_metrics = gen_analysis.run()
 

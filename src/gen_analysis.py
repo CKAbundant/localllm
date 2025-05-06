@@ -54,6 +54,9 @@ class GenAnalysis:
         req_cols (list[str]):
             List of columns to be displayed (Default: ["id", "pub_date", "ticker",
             "title", "content", "rating", "reasons"]).
+        start_id (int):
+            ID of the news item to start sentiment rating instead of starting
+            from scratch (Default: 0).
 
     Attributes:
         local_llm (InferLLM):
@@ -74,6 +77,9 @@ class GenAnalysis:
         req_cols (list[str]):
             List of columns to be displayed (Default: ["id", "pub_date", "ticker",
             "title", "content", "rating", "reasons"]).
+        start_id (int):
+            ID of the news item to start sentiment rating instead of starting
+            from scratch (Default: 0).
     """
 
     def __init__(
@@ -93,6 +99,7 @@ class GenAnalysis:
             "rating",
             "reasons",
         ],
+        start_id: int = 0,
     ) -> None:
         self.local_llm = local_llm
         self.model_name = model_name
@@ -104,6 +111,7 @@ class GenAnalysis:
         )
         self.test_path = path.test
         self.req_cols = req_cols
+        self.start_id = start_id
 
     def run(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Generate sentiment ratings by local LLM and evaluate its performance.
@@ -140,11 +148,12 @@ class GenAnalysis:
         # Create folder if not exist
         utils.create_folder(Path(self.ratings_path).parent)
 
-        # Create temp file to save ratings
+        # Create temp file to save ratings and check if exist
         temp_path = Path(self.ratings_path).with_stem(self.model_name)
-
-        # Check if temp file exist
         temp_exist = temp_path.is_file()
+
+        # Get start index
+        start_idx = self.get_start_index(news_list)
 
         with open(temp_path, "a", newline="") as csvfile:
             # Create DictWriter and write column names
@@ -153,7 +162,7 @@ class GenAnalysis:
             if not temp_exist:
                 writer.writeheader()
 
-            for news_item in tqdm(news_list):
+            for news_item in tqdm(news_list[start_idx:]):
                 writer.writerow(self.local_llm.senti_rate(news_item))
 
                 # Ensure immediate write to disc
@@ -262,3 +271,21 @@ class GenAnalysis:
         plt.tight_layout()
         fig.savefig(self.fig_path)
         plt.close()
+
+    def get_start_index(self, news_list: list[dict[str, int | str]]) -> int:
+        """Get the index of 'start_id' in 'news_item' list.
+
+        Args:
+            news_list (list[dict[str, int | str]]):
+                List of news item which is a dictionary containing 'id', 'ticker',
+                and 'news'.
+
+        Returns:
+            (int): index of selected news item based on 'start_id'
+        """
+
+        # Convert to DataFrame for ease of manipulation
+        df = pd.DataFrame(news_list)
+
+        # Return index for 'start_id'
+        return df.loc[df["id"] == self.start_id, "id"].index.item()
