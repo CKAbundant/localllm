@@ -158,10 +158,10 @@ class LlamaLLM(InferLLM):
         response = llm.create_chat_completion(**payload)
         content = response["choices"][0]["message"]["content"]
 
+        print(f"\nresponse : \n\n{pformat(response)}\n")
+
         # Extract dictionary LLM response
         content = utils.extract_dict_response(content)
-
-        print(f"\nresponse : \n\n{response}\n")
 
         # Ensure dictionary is returned
         return ast.literal_eval(content)

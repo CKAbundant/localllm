@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "deepseek_r1_qwen_14b_q8"
+model: "llama_31_8b"
 start_id: 0
 
 # Infer parameters
@@ -242,48 +242,48 @@ mistral_7b_q4_km:
 
 llama:
   family: "llama"
-  class_name: "llamaLLM"
+  class_name: "LlamaLLM"
   data_dir: "${path.data_dir}/${llama.family}"
   model_dir: "${path.model_dir}/${llama.family}"
 
 
-llama_3.1_8b:
+llama_31_8b:
   repo_id: "mradermacher/Llama-3.1-8B-SpecialTitanFusion-GGUF"
   filename: "Llama-3.1-8B-SpecialTitanFusion.Q8_0.gguf"
-  ratings_path: "${llama.data_dir}/ratings_llama_3.1_8b.csv"
-  metrics_path: "${llama.data_dir}/metrics_llama_3.1_8b.csv"
+  ratings_path: "${llama.data_dir}/ratings_llama_31_8b.csv"
+  metrics_path: "${llama.data_dir}/metrics_llama_31_8b.csv"
 
   download:
-    repo_id: "${llama_3.1_8b.repo_id}"
-    filename: "${llama_3.1_8b.filename}"
+    repo_id: "${llama_31_8b.repo_id}"
+    filename: "${llama_31_8b.filename}"
     model_dir: "${llama.model_dir}"
     token: null
 
   infer:
     class_name: "${llama.class_name}"
     script_path: "${path.script}"
-    model_path: "${llama.model_dir}/${llama_3.1_8b.filename}"
+    model_path: "${llama.model_dir}/${llama_31_8b.filename}"
     n_ctx: 2048
     n_threads: "${n_threads}"
     n_gpu_layers: "${n_gpu_layers}"
     verbose: "${verbose}"
 
-llama_3.2_3b:
+llama_32_3b:
   repo_id: "bartowski/Llama-3.2-3B-Instruct-GGUF"
   filename: "Llama-3.2-3B-Instruct-Q8_0.gguf"
-  ratings_path: "${llama.data_dir}/ratings_llama_3.2_3b.csv"
-  metrics_path: "${llama.data_dir}/metrics_llama_3.2_3b.csv"
+  ratings_path: "${llama.data_dir}/ratings_llama_32_3b.csv"
+  metrics_path: "${llama.data_dir}/metrics_llama_32_3b.csv"
 
   download:
-    repo_id: "${llama_3.2_3b.repo_id}"
-    filename: "${llama_3.2_3b.filename}"
+    repo_id: "${llama_32_3b.repo_id}"
+    filename: "${llama_32_3b.filename}"
     model_dir: "${llama.model_dir}"
     token: null
 
   infer:
     class_name: "${llama.class_name}"
     script_path: "${path.script}"
-    model_path: "${llama.model_dir}/${llama_3.2_3b.filename}"
+    model_path: "${llama.model_dir}/${llama_32_3b.filename}"
     n_ctx: 2048
     n_threads: "${n_threads}"
     n_gpu_layers: "${n_gpu_layers}"
