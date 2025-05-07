@@ -55,23 +55,11 @@ def main() -> None:
         infer_llm = utils.get_class_instance(**cfg_model.infer)
 
         # Generate DataFrame after sentiment analysis on 'news_list'
-        gen_analysis = GenAnalysis(
-            infer_llm,
-            cfg.model,
-            cfg.path,
-            cfg.fig,
-            cfg_model.ratings_path,
-            cfg_model.metrics_path,
-            cfg.req_cols,
-            cfg.start_id,
-        )
+        gen_analysis = GenAnalysis(local_llm=infer_llm, **cfg.gen_analysis)
         df_senti, df_metrics = gen_analysis.run()
 
         print(f"df_senti : \n\n{df_senti}\n")
         print(f"df_metrics : \n\n{df_metrics}\n")
-
-
-# def gen_overall_metrics()
 
 
 if __name__ == "__main__":

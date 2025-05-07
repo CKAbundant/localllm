@@ -6,6 +6,13 @@ from typing import Any, Type, TypeVar
 
 from omegaconf import DictConfig, OmegaConf, ValidationError
 
+from src.prompt_template import (
+    batch_sys_prompt,
+    batch_user_prompt,
+    sys_prompt,
+    user_prompt,
+)
+
 # Create generic type variable 'T'
 T = TypeVar("T")
 
@@ -171,3 +178,32 @@ def ensure_double_quotes(text: str) -> str:
     text = re.sub(r"(?<=\[)'|'(?=\])", '"', text)
 
     return text
+
+
+def init_sys_usr_prompt(
+    news: dict[str, int | str] | list[dict[str, int | str]],
+) -> tuple[str, str]:
+    """Initialize system and user prompts given news item or list of news items.
+
+    - Use batch system and user prompt if 'news' is list of news items.
+    - Use normal system and user prompt if 'news' is dictionary type.
+
+    Args:
+        news (dict[str, int  |  str] | list[dict[str, int | str]]):
+            List of dictionary or dictionary containing 'id', 'ticker'
+            and 'news' info.
+
+    Returns:
+        sys_p (str): System prompt updated with 'news'.
+        usr_p (str): User prompt updated with 'news'.
+    """
+
+    if isinstance(news, list):
+        sys_p = batch_sys_prompt
+        usr_p = batch_user_prompt.format(news_list=news)
+
+    else:
+        sys_p = sys_prompt
+        usr_p = user_prompt.format(news_item=news)
+
+    return sys_p, usr_p
