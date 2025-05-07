@@ -2,16 +2,23 @@ gen_test_data: false
 download: true
 infer: true
 model: "llama_31_8b"
-start_id: 71
 
-req_cols:
-  - "id"
-  - "pub_date"
-  - "ticker"
-  - "title"
-  - "content"
-  - "rating"
-  - "reasons"
+gen_analysis:
+  model_name: "${model}"
+  path: "${path}"
+  fig: "${fig}"
+  ratings_path: "${${model}.ratings_path}"
+  metrics_path: "${${model}.metrics_path}"
+  req_cols:
+    - "id"
+    - "pub_date"
+    - "ticker"
+    - "title"
+    - "content"
+    - "rating"
+    - "reasons"
+  start_id: 0
+  batch_size: 20
 
 # Standard Infer parameters
 std_infer: &std_infer
@@ -71,8 +78,6 @@ gemma_4b:
 
   infer:
     model_path: "${gemma.model_dir}/${gemma_4b.filename}"
-
-    # Merge with standard inference and gemma inference parameters
     <<: *std_infer
     <<: *gemma_infer
 
@@ -90,8 +95,6 @@ gemma_12b:
 
   infer:
     model_path: "${gemma.model_dir}/${gemma_12b.filename}"
-
-    # Merge with standard inference and gemma inference parameters
     <<: *std_infer
     <<: *gemma_infer
 
@@ -109,8 +112,6 @@ gemma_27b:
 
   infer:
     model_path: "${gemma.model_dir}/${gemma_27b.filename}"
-
-    # Merge with standard inference and gemma inference parameters
     <<: *std_infer
     <<: *gemma_infer
 
@@ -149,8 +150,6 @@ mistral_7b_q8:
 
   infer:
     model_path: "${mistral.model_dir}/${mistral_7b_q8.filename}"
-
-    # Merge with standard inference and mistral inference parameters
     <<: *std_infer
     <<: *mistral_infer
 
@@ -168,8 +167,6 @@ mistral_7b_q6:
 
   infer:
     model_path: "${mistral.model_dir}/${mistral_7b_q6.filename}"
-
-    # Merge with standard inference and mistral inference parameters
     <<: *std_infer
     <<: *mistral_infer
 
@@ -187,8 +184,6 @@ mistral_7b_q5_km:
 
   infer:
     model_path: "${mistral.model_dir}/${mistral_7b_q5_km.filename}"
-
-    # Merge with standard inference and mistral inference parameters
     <<: *std_infer
     <<: *mistral_infer
 
@@ -206,8 +201,6 @@ mistral_7b_q5_ks:
 
   infer:
     model_path: "${mistral.model_dir}/${mistral_7b_q5_ks.filename}"
-
-    # Merge with standard inference and mistral inference parameters
     <<: *std_infer
     <<: *mistral_infer
 
@@ -225,8 +218,6 @@ mistral_7b_q4_km:
 
   infer:
     model_path: "${mistral.model_dir}/${mistral_7b_q4_km.filename}"
-
-    # Merge with standard inference and mistral inference parameters
     <<: *std_infer
     <<: *mistral_infer
 
@@ -261,8 +252,6 @@ llama_31_8b:
 
   infer:
     model_path: "${llama.model_dir}/${llama_31_8b.filename}"
-
-    # Merge with standard inference and llama inference parameters
     <<: *std_infer
     <<: *llama_infer
 
@@ -280,8 +269,6 @@ llama_32_3b:
 
   infer:
     model_path: "${llama.model_dir}/${llama_32_3b.filename}"
-
-    # Merge with standard inference and llama inference parameters
     <<: *std_infer
     <<: *llama_infer
 
@@ -321,8 +308,6 @@ qwen_3_8b_q4_km:
 
   infer:
     model_path: "${qwen.model_dir}/${qwen_3_8b_q4_km.filename}"
-
-    # Merge with standard inference and qwen inference parameters
     <<: *std_infer
     <<: *qwen_infer
 
@@ -360,8 +345,6 @@ deepseek_r1_llama_8b:
 
   infer:
     model_path: "${deepseek.model_dir}/${deepseek_r1_llama_8b.filename}"
-
-    # Merge with standard inference and gemma inference parameters
     <<: *std_infer
     <<: *deepseek_infer
 
@@ -379,8 +362,6 @@ deepseek_r1_qwen_14b_q8:
 
   infer:
     model_path: "${deepseek.model_dir}/${deepseek_r1_qwen_14b_q8.filename}"
-
-    # Merge with standard inference and gemma inference parameters
     <<: *std_infer
     <<: *deepseek_infer
 
@@ -398,8 +379,6 @@ deepseek_r1_qwen_7b_q8:
 
   infer:
     model_path: "${deepseek.model_dir}/${deepseek_r1_qwen_7b_q8.filename}"
-
-    # Merge with standard inference and gemma inference parameters
     <<: *std_infer
     <<: *deepseek_infer
 
