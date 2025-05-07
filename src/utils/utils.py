@@ -132,7 +132,7 @@ def get_token_usage(response: dict[str, Any]) -> dict[str, int]:
     return dict(**token_dict, **usage_dict)
 
 
-def extract_dict_response(text: str) -> str:
+def extract_json_response(text: str) -> str:
     """Extract dictionary response from local LLM i.e. exclude thinking quotes."""
 
     # List message fence if any

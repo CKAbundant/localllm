@@ -9,16 +9,22 @@ from pathlib import Path
 from pprint import pformat
 from typing import Any
 
+import httpx
 import pandas as pd
 from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
-from llama_cpp import ChatCompletionRequestResponseFormat, Llama
+from llama_cpp import Llama, LlamaGrammar
 
 repo_dir = Path(__file__).parents[1].as_posix()
 if repo_dir not in sys.path:
     sys.path.append(repo_dir)
 
-from src.prompt_template import sys_prompt, user_prompt
+from src.prompt_template import (
+    batch_sys_prompt,
+    batch_user_prompt,
+    sys_prompt,
+    user_prompt,
+)
 from src.senti_rater import SentiRating
 from src.utils import utils
 from src.utils.timed_method import TimedMethod
@@ -53,6 +59,8 @@ class InferLLM(ABC):
             Number of GPUs available. 0 for no GPU.
         verbose (bool):
             Whether to show all info.
+        temperature (float):
+            Temperature to use for sampling.
 
     Attributes:
         model_path (str):
@@ -65,8 +73,14 @@ class InferLLM(ABC):
             Number of GPUs available. 0 for no GPU.
         verbose (bool):
             Whether to show all info.
-        _timings (list[float]):
+        temperature (float):
+            Temperature to use for sampling.
+        timings (list[float]):
             List to store time taken to 'senti_rate' method.
+        json_grammar (LlamaGrammar):
+            GBNF grammar for JSON output.
+        llm (Llama):
+            Initialized instance of Llama class for specific local LLM.
     """
 
     def __init__(
@@ -76,27 +90,21 @@ class InferLLM(ABC):
         n_threads: int,
         n_gpu_layers: int,
         verbose: bool,
+        temperature: float,
     ) -> None:
         self.model_path = model_path
         self.n_ctx = n_ctx
         self.n_threads = n_threads
         self.n_gpu_layers = n_gpu_layers
         self.verbose = verbose
+        self.temperature = temperature
         self.timings = []
+        self.json_grammar = self.get_json_grammar()
+        self.llm = self.gen_llm()
 
     @abstractmethod
-    def senti_rate(self, news_item: dict[str, int | str]) -> dict[str, Any]:
-        """Perform sentiment rating on 'news_items' by generating structured
-        JSON output based on 'SentiRating' Pydantic class.
-
-        Args:
-            news_item (dict[str, int  |  str]):
-                Dictionary containing 'id', 'ticker' and 'news' info.
-
-        Returns:
-            payload (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
-        """
+    def gen_llm(self) -> Llama:
+        """Generate initialized instance of Llama for specific local LLM."""
 
         pass
 
@@ -115,6 +123,115 @@ class InferLLM(ABC):
 
         pass
 
+    def get_json_grammar(self) -> LlamaGrammar:
+        """Load GBNF Grammar for JSON from 'json.gbnf' file."""
+
+        # Hard code relative path to 'json.gnbf'
+        gbnf_path = f"./models/json.gbnf"
+        url = "https://raw.githubusercontent.com/ggerganov/llama.cpp/master/grammars/json_arr.gbnf"
+
+        if not Path(gbnf_path).is_file():
+            # Download 'json.gbnf' via httpx
+            response = httpx.get(url)
+            response.raise_for_status()
+            grammar_text = response.text
+
+            # Save as 'json.gbnf' file in 'models' folder
+            with open(gbnf_path, "w", encoding="utf-8") as file:
+                file.write(grammar_text)
+
+        # Load 'json.gbnf' file
+        with open(gbnf_path, "r", encoding="utf-8") as file:
+            grammar_text = file.read()
+
+        return LlamaGrammar.from_string(grammar_text)
+
+    @TimedMethod
+    def senti_rate(self, news_item: dict[str, int | str]) -> dict[str, Any]:
+        """Perform sentiment rating on 'news_item'.
+
+        Args:
+            news_item (dict[str, int  |  str]):
+                Dictionary containing 'id', 'ticker' and 'news' info.
+
+        Returns:
+            (dict[str, int | str]):
+                Dictionary containing 'id', 'rating' and 'reasons' info.
+        """
+
+        # Generate payload for chat completion
+        payload = self.gen_payload(news_item)
+
+        counter = 0
+        while counter < 3:
+            try:
+                # Get sentiment rating and reasons
+                response = self.llm.create_chat_completion(**payload)
+                content = response["choices"][0]["message"]["content"]
+
+                print(f"\nresponse : \n\n{pformat(response)}\n")
+
+                # Extract json response which is a list of dictionary
+                content = utils.extract_json_response(content)
+
+                # Convert string into list of dictionaries
+                payload = ast.literal_eval(content)
+
+                # 'payload' contains only 1 item
+                return payload[0]
+
+            except Exception as e:
+                counter += 1
+                print(f"Attempts to rate sentiment : {counter}")
+
+                # Wait 3 seconds to attempt again
+                time.sleep(3)
+
+        return {}
+
+    @TimedMethod
+    def batch_senti_rate(
+        self, news_batch: list[dict[str, int | str]]
+    ) -> list[dict[str, Any]]:
+        """Perform sentiment on a batch of news items.
+
+        Args:
+            news_batch (list[dict[str, int | str]]):
+                Batch of news item which is a dictionary containing 'id', 'ticker',
+                and 'news'.
+        Returns:
+            (list[dict[str, Any]]):
+                List of ratings i.e. dictionary containing 'id', 'rating'
+                and 'reasons'.
+        """
+
+        # Generate payload for chat completion
+        payload = self.gen_payload(news_batch)
+
+        counter = 0
+        while counter < 3:
+            try:
+                # Get sentiment rating and reasons
+                response = self.llm.create_chat_completion(**payload)
+                content = response["choices"][0]["message"]["content"]
+
+                print(f"\nresponse : \n\n{pformat(response)}\n")
+
+                # Extract json response which is a list of dictionary
+                content = utils.extract_json_response(content)
+
+                # Convert string into list of dictionaries
+                return ast.literal_eval(content)
+
+            except Exception as e:
+                counter += 1
+                print(f"Attempts to rate sentiment : {counter}")
+
+                # Wait 3 seconds to attempt again
+                time.sleep(3)
+
+        return []
+
 
 class LlamaLLM(InferLLM):
     """Concrete implementation of 'InferLLM' abstract class for 'Gemma' models."""
@@ -126,24 +243,16 @@ class LlamaLLM(InferLLM):
         n_threads: int = 8,
         n_gpu_layers: int = 0,
         verbose: bool = False,
+        temperature: float = 0.2,
     ) -> None:
-        super().__init__(model_path, n_ctx, n_threads, n_gpu_layers, verbose)
+        super().__init__(
+            model_path, n_ctx, n_threads, n_gpu_layers, verbose, temperature
+        )
 
-    @TimedMethod
-    def senti_rate(self, news_item: dict[str, int | str]) -> dict[str, Any]:
-        """Perform sentiment rating on 'news_item'.
+    def gen_llm(self) -> Llama:
+        """Generate initialized instance of Llama for specific local LLM."""
 
-        Args:
-            news_item (dict[str, int  |  str]):
-                Dictionary containing 'id', 'ticker' and 'news' info.
-
-        Returns:
-            payload (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
-        """
-
-        # Load local llm
-        llm = Llama(
+        return Llama(
             model_path=self.model_path,
             n_ctx=self.n_ctx,
             n_threads=self.n_threads,
@@ -151,43 +260,40 @@ class LlamaLLM(InferLLM):
             verbose=self.verbose,
         )
 
-        # Generate payload for chat completion
-        payload = self.gen_payload(news_item)
-
-        # Get sentiment rating and reasons
-        response = llm.create_chat_completion(**payload)
-        content = response["choices"][0]["message"]["content"]
-
-        print(f"\nresponse : \n\n{pformat(response)}\n")
-
-        # Extract dictionary LLM response
-        content = utils.extract_dict_response(content)
-
-        # Ensure dictionary is returned
-        return ast.literal_eval(content)
-
-    def gen_payload(self, news_item: dict[str, int | str]) -> dict[str, Any]:
+    def gen_payload(
+        self, news: dict[str, int | str] | list[dict[str, int | str]]
+    ) -> dict[str, Any]:
         """Generate payload for local llm chat completion.
 
         Args:
-            news_item (dict[str, int  |  str]):
-                Dictionary containing 'id', 'ticker' and 'news' info.
+            news (dict[str, int  |  str] | list[dict[str, int | str]]):
+                List of dictionary or dictionary containing 'id', 'ticker'
+                and 'news' info.
 
         Returns:
             payload (dict[str, int | str]):
                 Dictionary containing 'id', 'rating' and 'reasons' info.
         """
 
+        if isinstance(news, list):
+            sys_p = batch_sys_prompt
+            usr_p = batch_user_prompt.format(news_list=news)
+
+        else:
+            sys_p = sys_prompt
+            usr_p = user_prompt.format(news_item=news)
+
         payload = {
             "messages": [
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": user_prompt.format(news_item=news_item)},
+                {"role": "system", "content": sys_p},
+                {"role": "user", "content": usr_p},
             ],
             "response_format": {
                 "type": "json_schema",
-                "json_schema": {"schema": SentiRating.model_json_schema()},
+                "schema": SentiRating.model_json_schema(),
             },
-            "temperature": 0.2,
+            "temperature": self.temperature,
+            "grammar": self.json_grammar,
         }
 
         return payload
@@ -222,26 +328,18 @@ class MistralLLM(InferLLM):
         verbose: bool = False,
         chat_format: str = "mistral-instruct",
         stop: list[str] = ["</s>", "[INST]", "[/INST]"],
+        temperature: float = 0.1,
     ) -> None:
-        super().__init__(model_path, n_ctx, n_threads, n_gpu_layers, verbose)
+        super().__init__(
+            model_path, n_ctx, n_threads, n_gpu_layers, verbose, temperature
+        )
         self.chat_format = chat_format
         self.stop = stop
 
-    @TimedMethod
-    def senti_rate(self, news_item: dict[str, int | str]) -> dict[str, Any]:
-        """Perform sentiment rating on 'news_item'.
+    def gen_llm(self) -> Llama:
+        """Generate initialized instance of Llama for specific local LLM."""
 
-        Args:
-            news_item (dict[str, int  |  str]):
-                Dictionary containing 'id', 'ticker' and 'news' info.
-
-        Returns:
-            payload (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
-        """
-
-        # Load local llm
-        llm = Llama(
+        return Llama(
             model_path=self.model_path,
             n_ctx=self.n_ctx,
             n_threads=self.n_threads,
@@ -250,55 +348,38 @@ class MistralLLM(InferLLM):
             chat_format=self.chat_format,
         )
 
-        # Generate payload for chat completion
-        payload = self.gen_payload(news_item)
-
-        counter = 0
-        while counter < 3:
-            try:
-                # Get sentiment rating and reasons
-                response = llm.create_chat_completion(**payload)
-                content = response["choices"][0]["message"]["content"]
-
-                # Extract dictionary LLM response
-                content = utils.extract_dict_response(content)
-
-                print(f"\nresponse : \n\n{pformat(response)}\n")
-
-                # Ensure dictionary is returned
-                return ast.literal_eval(content)
-
-            except Exception as e:
-                counter += 1
-                print(f"Attempts to rate sentiment : {counter}")
-
-                # Wait 3 seconds to attempt again
-                time.sleep(3)
-
-        return {}
-
-    def gen_payload(self, news_item: dict[str, int | str]) -> dict[str, Any]:
+    def gen_payload(
+        self, news: dict[str, int | str] | list[dict[str, int | str]]
+    ) -> dict[str, Any]:
         """Generate payload for local llm chat completion.
 
         Args:
-            news_item (dict[str, int  |  str]):
-                Dictionary containing 'id', 'ticker' and 'news' info.
+            news (dict[str, int  |  str] | list[dict[str, int | str]]):
+                List of dictionary or dictionary containing 'id', 'ticker'
+                and 'news' info.
 
         Returns:
             payload (dict[str, int | str]):
                 Dictionary containing 'id', 'rating' and 'reasons' info.
         """
 
-        usr_prompt = user_prompt.format(news_item=news_item)
+        if isinstance(news, list):
+            sys_p = batch_sys_prompt
+            usr_p = batch_user_prompt.format(news_list=news)
+
+        else:
+            sys_p = sys_prompt
+            usr_p = user_prompt.format(news_item=news)
 
         payload = {
-            "messages": [{"role": "user", "content": f"{sys_prompt}\n\n{usr_prompt}"}],
+            "messages": [{"role": "user", "content": f"{sys_p}\n\n{usr_p}"}],
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {"schema": SentiRating.model_json_schema()},
             },
-            "temperature": 0.1,
+            "temperature": self.temperature,
             "stop": self.stop,
+            "grammar": self.json_grammar,
         }
 
         return payload
@@ -398,13 +479,16 @@ class QwenLLM(InferLLM):
                 response = llm.create_chat_completion(**payload)
                 content = response["choices"][0]["message"]["content"]
 
-                # Extract dictionary LLM response
-                content = utils.extract_dict_response(content)
-
                 print(f"\nresponse : \n\n{pformat(response)}\n")
 
-                # Ensure dictionary is returned
-                return ast.literal_eval(content)
+                # Extract json response which is a list of dictionary
+                content = utils.extract_json_response(content)
+
+                # Convert string into list of dictionaries
+                payload = ast.literal_eval(content)
+
+                # 'payload' contains only 1 item
+                return payload[0]
 
             except Exception as e:
                 counter += 1
