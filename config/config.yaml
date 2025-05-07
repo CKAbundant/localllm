@@ -2,7 +2,7 @@ gen_test_data: false
 download: true
 infer: true
 model: "llama_31_8b"
-start_id: 0
+start_id: 4
 
 # Infer parameters
 n_threads: 8
