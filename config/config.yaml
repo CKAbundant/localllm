@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "deepseek_r1_llama_8b"
+model: "gemma_4b"
 
 gen_analysis:
   model_name: "${model}"
@@ -18,10 +18,11 @@ gen_analysis:
     - "rating"
     - "reasons"
   start_id: 0
-  batch_size: null # No batch sentiment analysis if null
+  batch_size: 20 # No batch sentiment analysis if null
 
 # Standard Infer parameters
 std_infer: &std_infer
+  n_ctx: 5000
   script_path: "${path.script}"
   n_threads: 8
   n_gpu_layers: 0
@@ -59,7 +60,6 @@ gemma:
 
   infer: &gemma_infer
     class_name: "LlamaLLM"
-    n_ctx: 2048
     temperature: 0.2
 
 ########################
