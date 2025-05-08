@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "gemma_4b"
+model: "mistral_7b_q5_ks"
 
 gen_analysis:
   model_name: "${model}"
@@ -18,7 +18,7 @@ gen_analysis:
     - "rating"
     - "reasons"
   start_id: 0
-  batch_size: 20 # No batch sentiment analysis if null
+  batch_size: null # No batch sentiment analysis if null
 
 # Standard Infer parameters
 std_infer: &std_infer
@@ -283,7 +283,7 @@ qwen:
 
   infer: &qwen_infer
     class_name: "QwenLLM"
-    n_ctx: 2048 # max 40960
+    n_ctx: 5000 # max 40960
     chat_format: "chatml"
     rope_freq_base: 1000000.0
     temperature: 0.7
@@ -308,6 +308,23 @@ qwen_3_8b_q4_km:
 
   infer:
     model_path: "${qwen.model_dir}/${qwen_3_8b_q4_km.filename}"
+    <<: *std_infer
+    <<: *qwen_infer
+
+qwen_25_7b_q4_km:
+  repo_id: "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF"
+  filename: "qwen2.5-coder-7b-instruct-q4_k_m.gguf"
+  ratings_path: "${qwen.data_dir}/ratings_qwen_25_7b_q4_km.csv"
+  metrics_path: "${qwen.data_dir}/metrics_qwen_25_7b_q4_km.csv"
+
+  download:
+    repo_id: "${qwen_25_7b_q4_km.repo_id}"
+    filename: "${qwen_25_7b_q4_km.filename}"
+    model_dir: "${qwen.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${qwen.model_dir}/${qwen_25_7b_q4_km.filename}"
     <<: *std_infer
     <<: *qwen_infer
 

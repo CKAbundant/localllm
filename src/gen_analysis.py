@@ -203,7 +203,7 @@ class GenAnalysis:
                     continue
 
                 # Update each ratings in 'ratings_list' with average elapsed time
-                ratings_list = self.update_elapsed(ratings_list)
+                ratings_list = self.update_elapsed(ratings_list, self.batch_size)
 
                 # Ensure immediate write to disc
                 writer.writerows(ratings_list)

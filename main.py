@@ -53,6 +53,7 @@ def main() -> None:
     if cfg.infer:
         # Get instance of desired Infernence class
         infer_llm = utils.get_class_instance(**cfg_model.infer)
+        print(f"\ninfer_llm : {infer_llm}\n")
 
         # Generate DataFrame after sentiment analysis on 'news_list'
         gen_analysis = GenAnalysis(local_llm=infer_llm, **cfg.gen_analysis)
