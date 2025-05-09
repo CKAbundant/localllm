@@ -570,7 +570,7 @@ phi:
 
 phi_4_14b_q8_unsloth:
   repo_id: "unsloth/Phi-4-reasoning-plus-GGUF"
-  filename: "unsloth/Phi-4-reasoning-plus-GGUF" # 15.6GB
+  filename: "Phi-4-reasoning-plus-Q8_0.gguf" # 15.6GB
   ratings_path: "${deepseek.data_dir}/ratings_phi_4_14b_q8_unsloth.csv"
   metrics_path: "${deepseek.data_dir}/metrics_phi_4_14b_q8_unsloth.csv"
 
@@ -585,3 +585,19 @@ phi_4_14b_q8_unsloth:
     <<: *std_infer
     <<: *phi_infer
 
+phi_4_mini_14b_q8_unsloth:
+  repo_id: "unsloth/Phi-4-mini-reasoning-GGUF"
+  filename: "Phi-4-mini-reasoning-Q8_0.gguf"
+  ratings_path: "${deepseek.data_dir}/ratings_phi_4_mini_14b_q8_unsloth.csv"
+  metrics_path: "${deepseek.data_dir}/metrics_phi_4_mini_14b_q8_unsloth.csv"
+
+  download:
+    repo_id: "${phi_4_mini_14b_q8_unsloth.repo_id}"
+    filename: "${phi_4_mini_14b_q8_unsloth.filename}"
+    model_dir: "${deepseek.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${deepseek.model_dir}/${phi_4_mini_14b_q8_unsloth.filename}"
+    <<: *std_infer
+    <<: *phi_infer
