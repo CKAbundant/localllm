@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "qwq_32b_q6_k"
+model: "gemma_12b"
 
 gen_analysis:
   model_name: "${model}"
@@ -63,6 +63,23 @@ gemma:
     temperature: 0.2
 
 ########################
+
+gemma_1b_bf16:
+  repo_id: "unsloth/gemma-3-1b-it-GGUF"
+  filename: "gemma-3-1b-it-BF16.gguf"
+  ratings_path: "${gemma.data_dir}/ratings_gemma_1b_bf16.csv"
+  metrics_path: "${gemma.data_dir}/metrics_gemma_1b_bf16.csv"
+
+  download:
+    repo_id: "${gemma_1b_bf16.repo_id}"
+    filename: "${gemma_1b_bf16.filename}"
+    model_dir: "${gemma.model_dir}"
+    token: "${oc.env:HF_KEY}"
+
+  infer:
+    model_path: "${gemma.model_dir}/${gemma_1b_bf16.filename}"
+    <<: *std_infer
+    <<: *gemma_infer
 
 gemma_4b:
   repo_id: "google/gemma-3-4b-it-qat-q4_0-gguf"
@@ -428,6 +445,23 @@ qwq_32b_q6_k:
   infer:
     model_path: "${qwen.model_dir}/${qwq_32b_q6_k.filename}"
     is_qwq: true
+    <<: *std_infer
+    <<: *qwen_infer
+
+qwen_3_8b_q4_km_unsloth:
+  repo_id: "unsloth/Qwen3-8B-GGUF"
+  filename: "Qwen3-8B-Q4_K_M.gguf"
+  ratings_path: "${qwen.data_dir}/ratings_qwen_3_8b_q4_km_unsloth.csv"
+  metrics_path: "${qwen.data_dir}/metrics_qwen_3_8b_q4_km_unsloth.csv"
+
+  download:
+    repo_id: "${qwen_3_8b_q4_km_unsloth.repo_id}"
+    filename: "${qwen_3_8b_q4_km_unsloth.filename}"
+    model_dir: "${qwen.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${qwen.model_dir}/${qwen_3_8b_q4_km_unsloth.filename}"
     <<: *std_infer
     <<: *qwen_infer
 
