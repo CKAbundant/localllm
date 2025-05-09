@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "mistral_7b_q5_ks"
+model: "deepseek_3_33b_q6_k"
 
 gen_analysis:
   model_name: "${model}"
@@ -115,6 +115,23 @@ gemma_27b:
     <<: *std_infer
     <<: *gemma_infer
 
+gemma_27b_q6:
+  repo_id: "MaziyarPanahi/gemma-3-27b-it-GGUF"
+  filename: "gemma-3-27b-it.Q6_K.gguf" # 17.2GB -> 15.7GB RAM
+  ratings_path: "${gemma.data_dir}/ratings_gemma_27b_q6.csv"
+  metrics_path: "${gemma.data_dir}/metrics_gemma_27b_q6.csv"
+
+  download:
+    repo_id: "${gemma_27b_q6.repo_id}"
+    filename: "${gemma_27b_q6.filename}"
+    model_dir: "${gemma.model_dir}"
+    token: "${oc.env:HF_KEY}"
+
+  infer:
+    model_path: "${gemma.model_dir}/${gemma_27b_q6.filename}"
+    <<: *std_infer
+    <<: *gemma_infer
+
 ########################
 # Mistral
 ########################
@@ -135,6 +152,23 @@ mistral:
     temperature: 0.1
 
 ########################
+
+mistral_31_24b_q6_k:
+  repo_id: "unsloth/Mistral-Small-3.1-24B-Instruct-2503-GGUF"
+  filename: "Mistral-Small-3.1-24B-Instruct-2503-Q6_K.gguf"
+  ratings_path: "${mistral.data_dir}/ratings_mistral_31_24b_q6_k.csv"
+  metrics_path: "${mistral.data_dir}/metrics_mistral_31_24b_q6_k.csv"
+
+  download:
+    repo_id: "${mistral_31_24b_q6_k.repo_id}"
+    filename: "${mistral_31_24b_q6_k.filename}"
+    model_dir: "${mistral.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${mistral.model_dir}/${mistral_31_24b_q6_k.filename}"
+    <<: *std_infer
+    <<: *mistral_infer
 
 mistral_7b_q8:
   repo_id: "TheBloke/Mistral-7B-Instruct-v0.1-GGUF"
@@ -272,6 +306,57 @@ llama_32_3b:
     <<: *std_infer
     <<: *llama_infer
 
+llama_31_8b_q16:
+  repo_id: "modularai/Llama-3.1-8B-Instruct-GGUF"
+  filename: "llama-3.1-8b-instruct-bf16.gguf"
+  ratings_path: "${llama.data_dir}/ratings_llama_31_8b_q16.csv"
+  metrics_path: "${llama.data_dir}/metrics_llama_31_8b_q16.csv"
+
+  download:
+    repo_id: "${llama_31_8b_q16.repo_id}"
+    filename: "${llama_31_8b_q16.filename}"
+    model_dir: "${llama.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${llama.model_dir}/${llama_31_8b_q16.filename}"
+    <<: *std_infer
+    <<: *llama_infer
+
+llama_32_1b_q16:
+  repo_id: "unsloth/Llama-3.2-1B-Instruct-GGUF"
+  filename: "Llama-3.2-1B-Instruct-BF16.gguf"
+  ratings_path: "${llama.data_dir}/ratings_llama_32_1b_q16.csv"
+  metrics_path: "${llama.data_dir}/metrics_llama_32_1b_q16.csv"
+
+  download:
+    repo_id: "${llama_32_1b_q16.repo_id}"
+    filename: "${llama_32_1b_q16.filename}"
+    model_dir: "${llama.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${llama.model_dir}/${llama_32_1b_q16.filename}"
+    <<: *std_infer
+    <<: *llama_infer
+
+llama_32_3b_bf16:
+  repo_id: "unsloth/Llama-3.2-3B-Instruct-GGUF"
+  filename: "Llama-3.2-3B-Instruct-BF16.gguf"
+  ratings_path: "${llama.data_dir}/ratings_llama_32_3b_bf16.csv"
+  metrics_path: "${llama.data_dir}/metrics_llama_32_3b_bf16.csv"
+
+  download:
+    repo_id: "${llama_32_3b_bf16.repo_id}"
+    filename: "${llama_32_3b_bf16.filename}"
+    model_dir: "${llama.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${llama.model_dir}/${llama_32_3b_bf16.filename}"
+    <<: *std_infer
+    <<: *llama_infer
+
 ########################
 # Qwen
 ########################
@@ -396,6 +481,23 @@ deepseek_r1_qwen_7b_q8:
 
   infer:
     model_path: "${deepseek.model_dir}/${deepseek_r1_qwen_7b_q8.filename}"
+    <<: *std_infer
+    <<: *deepseek_infer
+
+deepseek_3_33b_q6_k:
+  repo_id: "mradermacher/DeepSeek-33B-NL2SQL-GGUF"
+  filename: "DeepSeek-33B-NL2SQL.Q6_K.gguf"
+  ratings_path: "${deepseek.data_dir}/ratings_deepseek_3_33b_q6_k.csv"
+  metrics_path: "${deepseek.data_dir}/metrics_deepseek_3_33b_q6_k.csv"
+
+  download:
+    repo_id: "${deepseek_3_33b_q6_k.repo_id}"
+    filename: "${deepseek_3_33b_q6_k.filename}"
+    model_dir: "${deepseek.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${deepseek.model_dir}/${deepseek_3_33b_q6_k.filename}"
     <<: *std_infer
     <<: *deepseek_infer
 

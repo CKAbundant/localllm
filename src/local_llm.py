@@ -180,7 +180,7 @@ class InferLLM(ABC):
                 print(e)
 
                 # Wait 3 seconds to attempt again
-                time.sleep(3)
+                time.sleep(10)
 
         return {}
 
@@ -265,6 +265,7 @@ class LlamaLLM(InferLLM):
         super().__init__(
             model_path, n_ctx, n_threads, n_gpu_layers, verbose, temperature
         )
+        self.llm = self.gen_llm()
 
     def gen_llm(self) -> Llama:
         """Generate initialized instance of Llama for specific local llama or
@@ -391,7 +392,7 @@ class MistralLLM(InferLLM):
 
 
 class QwenLLM(InferLLM):
-    """Concrete implementation of 'InferLLM' abstract class for 'QwenLLM' models.
+    """Concrete implementation of 'InferLLM' abstract class for qwen models.
 
     - Used No thinking mode as structured output is required.
 
