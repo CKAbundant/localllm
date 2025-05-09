@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "deepseek_3_33b_q6_k"
+model: "qwq_32b_q6_k"
 
 gen_analysis:
   model_name: "${model}"
@@ -22,7 +22,7 @@ gen_analysis:
 
 # Standard Infer parameters
 std_infer: &std_infer
-  n_ctx: 5000
+  n_ctx: 2048
   script_path: "${path.script}"
   n_threads: 8
   n_gpu_layers: 0
@@ -34,7 +34,7 @@ path:
   data_dir: "./data"
   divergent: "${path.data_dir}/divergent.csv"
   test: "${path.data_dir}/test.csv"
-  script: "./src/local_llm.py"
+  script: "./src/local_llm/local_llm.py"
 
 # Graph settings
 fig:
@@ -143,7 +143,6 @@ mistral:
 
   infer: &mistral_infer
     class_name: "MistralLLM"
-    n_ctx: 2048
     chat_format: "mistral-instruct"
     stop:
       - "</s>"
@@ -267,7 +266,6 @@ llama:
 
   infer: &llama_infer
     class_name: "LlamaLLM"
-    n_ctx: 2048
     temperature: 0.2
 
 ########################
@@ -368,7 +366,6 @@ qwen:
 
   infer: &qwen_infer
     class_name: "QwenLLM"
-    n_ctx: 5000 # max 40960
     chat_format: "chatml"
     rope_freq_base: 1000000.0
     temperature: 0.7
@@ -376,6 +373,7 @@ qwen:
     top_k: 20
     min_p: 0
     max_tokens: 128
+    repeat_penalty: 1.0
 
 ########################
 
@@ -393,6 +391,7 @@ qwen_3_8b_q4_km:
 
   infer:
     model_path: "${qwen.model_dir}/${qwen_3_8b_q4_km.filename}"
+    is_qwq: false
     <<: *std_infer
     <<: *qwen_infer
 
@@ -410,6 +409,25 @@ qwen_25_7b_q4_km:
 
   infer:
     model_path: "${qwen.model_dir}/${qwen_25_7b_q4_km.filename}"
+    is_qwq: false
+    <<: *std_infer
+    <<: *qwen_infer
+
+qwq_32b_q6_k:
+  repo_id: "Qwen/QwQ-32B-GGUF"
+  filename: "qwq-32b-q6_k.gguf"
+  ratings_path: "${qwen.data_dir}/ratings_qwq_32b_q6_k.csv"
+  metrics_path: "${qwen.data_dir}/metrics_qwq_32b_q6_k.csv"
+
+  download:
+    repo_id: "${qwq_32b_q6_k.repo_id}"
+    filename: "${qwen_25_7qwq_32b_q6_kb_q4_km.filename}"
+    model_dir: "${qwen.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${qwen.model_dir}/${qwq_32b_q6_k.filename}"
+    is_qwq: true
     <<: *std_infer
     <<: *qwen_infer
 
@@ -425,7 +443,6 @@ deepseek:
 
   infer: &deepseek_infer
     class_name: "DeepSeekLLM"
-    n_ctx: 2048
     stop:
       - "< | User | >"
     temperature: 0.6
@@ -484,20 +501,53 @@ deepseek_r1_qwen_7b_q8:
     <<: *std_infer
     <<: *deepseek_infer
 
-deepseek_3_33b_q6_k:
+deepseek_3_33b_q4_km:
   repo_id: "mradermacher/DeepSeek-33B-NL2SQL-GGUF"
-  filename: "DeepSeek-33B-NL2SQL.Q6_K.gguf"
-  ratings_path: "${deepseek.data_dir}/ratings_deepseek_3_33b_q6_k.csv"
-  metrics_path: "${deepseek.data_dir}/metrics_deepseek_3_33b_q6_k.csv"
+  filename: "DeepSeek-33B-NL2SQL.Q4_K_M.gguf"
+  ratings_path: "${deepseek.data_dir}/ratings_deepseek_3_33b_q4_km.csv"
+  metrics_path: "${deepseek.data_dir}/metrics_deepseek_3_33b_q4_km.csv"
 
   download:
-    repo_id: "${deepseek_3_33b_q6_k.repo_id}"
-    filename: "${deepseek_3_33b_q6_k.filename}"
+    repo_id: "${deepseek_3_33b_q4_km.repo_id}"
+    filename: "${deepseek_3_33b_q4_km.filename}"
     model_dir: "${deepseek.model_dir}"
     token: null
 
   infer:
-    model_path: "${deepseek.model_dir}/${deepseek_3_33b_q6_k.filename}"
+    model_path: "${deepseek.model_dir}/${deepseek_3_33b_q4_km.filename}"
     <<: *std_infer
     <<: *deepseek_infer
+
+########################
+# Phi
+########################
+
+phi:
+  family: "phi"
+  
+  data_dir: "${path.data_dir}/${phi.family}"
+  model_dir: "${path.model_dir}/${phi.family}"
+
+  infer: &phi_infer
+    class_name: "LlamaLLM"
+    temperature: 0.1
+
+########################
+
+phi_4_14b_q8_unsloth:
+  repo_id: "unsloth/Phi-4-reasoning-plus-GGUF"
+  filename: "unsloth/Phi-4-reasoning-plus-GGUF" # 15.6GB
+  ratings_path: "${deepseek.data_dir}/ratings_phi_4_14b_q8_unsloth.csv"
+  metrics_path: "${deepseek.data_dir}/metrics_phi_4_14b_q8_unsloth.csv"
+
+  download:
+    repo_id: "${phi_4_14b_q8_unsloth.repo_id}"
+    filename: "${phi_4_14b_q8_unsloth.filename}"
+    model_dir: "${deepseek.model_dir}"
+    token: null
+
+  infer:
+    model_path: "${deepseek.model_dir}/${phi_4_14b_q8_unsloth.filename}"
+    <<: *std_infer
+    <<: *phi_infer
 
