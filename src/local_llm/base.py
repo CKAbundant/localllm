@@ -106,7 +106,8 @@ class InferLLM(ABC):
 
         Returns:
             payload (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
+                Dictionary containing input parameters for 'create_chat_completion'
+                method.
         """
 
         pass

@@ -1,11 +1,14 @@
 """Classes for various local llm download and inference."""
 
+import time
+from pprint import pformat
 from typing import Any
 
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
 
 from src.local_llm.base import InferLLM
+from src.local_llm.timed_method import TimedMethod
 from src.senti_rater import SentiRating
 from src.utils import utils
 
@@ -52,7 +55,8 @@ class LlamaLLM(InferLLM):
 
         Returns:
             (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
+                Dictionary containing input parameters for 'create_chat_completion'
+                method.
         """
 
         # Get initialized system and user prompts
@@ -134,7 +138,8 @@ class MistralLLM(InferLLM):
 
         Returns:
             (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
+                Dictionary containing input parameters for 'create_chat_completion'
+                method.
         """
 
         # Get initialized system and user prompts
@@ -212,7 +217,7 @@ class QwenLLM(InferLLM):
         top_k: int = 20,
         min_p: float = 0,
         max_tokens: int = 512,
-        repeat_penality: float = 1.0,
+        repeat_penalty: float = 1.0,
         is_qwq: bool = False,
     ) -> None:
         super().__init__(
@@ -224,14 +229,14 @@ class QwenLLM(InferLLM):
         self.top_k = top_k
         self.min_p = min_p
         self.max_tokens = max_tokens
-        self.repeat_penalty = repeat_penality
+        self.repeat_penalty = repeat_penalty
         self.is_qwq = is_qwq
         self.llm = self.gen_llm()
 
     def gen_llm(self) -> Llama:
         """Generate initialized instance of Llama for specific local qwen LLM."""
 
-        llm = Llama(
+        return Llama(
             model_path=self.model_path,
             n_ctx=self.n_ctx,
             n_threads=self.n_threads,
@@ -240,7 +245,6 @@ class QwenLLM(InferLLM):
             chat_format=self.chat_format,
             rope_freq_base=self.rope_freq_base,
         )
-        llm.create_chat_completion()
 
     def gen_payload(
         self, news: dict[str, int | str] | list[dict[str, int | str]]
@@ -254,7 +258,8 @@ class QwenLLM(InferLLM):
 
         Returns:
             (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
+                Dictionary containing input parameters for 'create_chat_completion'
+                method.
         """
 
         # Get initialized system and user prompts
@@ -344,7 +349,8 @@ class DeepSeekLLM(InferLLM):
 
         Returns:
             (dict[str, int | str]):
-                Dictionary containing 'id', 'rating' and 'reasons' info.
+                Dictionary containing input parameters for 'create_chat_completion'
+                method.
         """
 
         # Get initialized system and user prompts

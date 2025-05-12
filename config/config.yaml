@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "gemma_12b"
+model: "phi_4_14b_q8_unsloth"
 
 gen_analysis:
   model_name: "${model}"
@@ -17,7 +17,7 @@ gen_analysis:
     - "content"
     - "rating"
     - "reasons"
-  start_id: 0
+  start_id: 252
   batch_size: null # No batch sentiment analysis if null
 
 # Standard Infer parameters
@@ -438,7 +438,7 @@ qwq_32b_q6_k:
 
   download:
     repo_id: "${qwq_32b_q6_k.repo_id}"
-    filename: "${qwen_25_7qwq_32b_q6_kb_q4_km.filename}"
+    filename: "${qwq_32b_q6_k.filename}"
     model_dir: "${qwen.model_dir}"
     token: null
 
@@ -564,7 +564,7 @@ phi:
 
   infer: &phi_infer
     class_name: "LlamaLLM"
-    temperature: 0.1
+    temperature: 0.2
 
 ########################
 
@@ -584,6 +584,7 @@ phi_4_14b_q8_unsloth:
     model_path: "${phi.model_dir}/${phi_4_14b_q8_unsloth.filename}"
     <<: *std_infer
     <<: *phi_infer
+    class_name: "PhiLowLLM"
 
 phi_4_mini_14b_q8_unsloth:
   repo_id: "unsloth/Phi-4-mini-reasoning-GGUF"

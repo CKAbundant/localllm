@@ -114,13 +114,19 @@ class GenAnalysis:
         self.fig = fig
         self.ratings_path = ratings_path
         self.metrics_path = metrics_path
-        self.fig_path = (
-            f"{path.data_dir}/{model_name.split("_")[0]}/cm_{model_name}.png"
-        )
+        self.fig_path = self.gen_fig_path()
         self.test_path = path.test
         self.req_cols = req_cols
         self.start_id = start_id
         self.batch_size = batch_size
+
+    def gen_fig_path(self) -> str:
+        """Generate 'fig_path' to save confusion matrix png file."""
+
+        # Get subfolder in 'data_dir' for specific model family
+        subfolder = Path(self.ratings_path).parent
+
+        return subfolder.joinpath(f"cm_{self.model_name}.png").as_posix()
 
     def run(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Generate sentiment ratings by local LLM and evaluate its performance.
