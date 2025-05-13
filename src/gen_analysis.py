@@ -142,7 +142,7 @@ class GenAnalysis:
         """
 
         df_senti = self.gen_dataset()
-        df_metrics = self.gen_metrics(df_senti)
+        df_metrics = GenAnalysis.gen_metrics(df_senti)
 
         return df_senti, df_metrics
 
@@ -348,7 +348,7 @@ class GenAnalysis:
         df_metrics = pd.DataFrame([metrics])
         df_metrics.to_csv(self.metrics_path, index=False)
 
-        # Save confusion matrix as image
+        # Plot and save confusion matrix as heatmap
         self.plot_cmatrix(cmatrix)
 
         return df_metrics

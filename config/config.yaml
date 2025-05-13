@@ -1,7 +1,7 @@
 gen_test_data: false
 download: true
 infer: true
-model: "phi_4_14b_q8_unsloth"
+model: "phi_4_mini_14b_q8_maziyar"
 
 gen_analysis:
   model_name: "${model}"
